@@ -28,7 +28,7 @@
 #include "pins_arduino.h"
 #endif
 
-#include <avr/pgmspace.h> 
+#include <avr/pgmspace.h>
 #include <avr/io.h>
 #include <avr/interrupt.h>
 
@@ -136,7 +136,7 @@ typedef struct pixelRGB {
 } PixelRGB;
 
 class ColorduinoObject {
- public:
+public:
   PixelRGB frameBuffer0[ColorduinoScreenWidth*ColorduinoScreenHeight];
   PixelRGB frameBuffer1[ColorduinoScreenWidth*ColorduinoScreenHeight];
   PixelRGB *curDrawFrame;
@@ -149,24 +149,24 @@ class ColorduinoObject {
     curDrawFrame = frameBuffer1;
   }
 
-   void _IO_Init() {
+  void _IO_Init() {
 #if defined(__AVR_ATmega1280__) || defined(__AVR_ATmega2560__)
-    DDRF = 0xff;
-    DDRH = 0xff;
-    DDRB = 0xff;
-    DDRE = 0xff;
-    DDRG = 0xff;
+    DDRF = 0xff; // set all pins direction to output of PortF
+    DDRH = 0xff; // set all pins direction to output of PortH
+    DDRB = 0xff; // set all pins direction to output of PortB
+    DDRE = 0xff; // set all pins direction to output of PortE
+    DDRG = 0xff; // set all pins direction to output of PortG
 
-    PORTF = 0x00;
-    PORTH = 0x00;  
-    PORTB = 0x00;
-    PORTE = 0x00;
-    PORTG = 0x00;
+    PORTF = 0x00; // set all pins output is low of PortF
+    PORTH = 0x00; // set all pins output is low of PortH
+    PORTB = 0x00; // set all pins output is low of PortB
+    PORTE = 0x00; // set all pins output is low of PortE
+    PORTG = 0x00; // set all pins output is low of PortG
 #elif defined(__AVR_ATmega328__) || defined(__AVR_ATmega168__)
-    DDRD = 0xff; // set all pins direction of PortD
-    DDRC = 0xff; // set all pins direction of PortC
-    DDRB = 0xff; // set all pins direction of PortB
-    
+    DDRD = 0xff; // set all pins direction to output of PortD
+    DDRC = 0xff; // set all pins direction to output of PortC
+    DDRB = 0xff; // set all pins direction to output of PortB
+
     PORTD = 0x00; // set all pins output is low of PortD
     PORTC = 0x00; // set all pins output is low of PortC
     PORTB = 0x00; // set all pins output is low of PortB
@@ -174,93 +174,98 @@ class ColorduinoObject {
     uint8_t lines[] = {A0, A1, A2, 3, 4, 6, 7, 8, 9, 10, 11, 12, 13};
 
     for(int i = 0; i < 13; i++){
-     pinMode(lines[i], OUTPUT);
-     digitalWrite(lines[i], LOW);
+      pinMode(lines[i], OUTPUT);
+      digitalWrite(lines[i], LOW);
     }
 #endif
-   }
-  
+  }
+
   void LED_Delay(unsigned char i);
-  
+
   void SetWhiteBal(unsigned char wbval[3]);
 
-  void _LED_Init()
-    {
-      LED_RST_SET;
-      LED_Delay(1);
-      LED_RST_CLR;
-      LED_Delay(1);
-      LED_RST_SET;
-      LED_Delay(1);
-    
-      line = 0;
-    }
+  void _LED_Init() {
+    LED_RST_SET;
+    LED_Delay(1);
+    LED_RST_CLR;
+    LED_Delay(1);
+    LED_RST_SET;
+    LED_Delay(1);
 
-  void _TC2_Init()
-    {
-      // Arduino runs at 16 Mhz...
-      // Timer Settings, for the Timer Control Register etc. , thank you internets.
-      // Timer2/Timer4 (8bit) Settings:
-      // prescaler (frequency divider) values:   CSx2    CSx1   CSx0
-      //                                           0       0      0    stopped
-      //                                           0       0      1      /1 
-      //                                           0       1      0      /8 
-      //                                           0       1      1      /32
-      //                                           1       0      0      /64 
-      //                                           1       0      1      /128
-      //                                           1       1      0      /256
-      //                                           1       1      1      /1024
-      // TCNT2/TCNT4 increments every  = 16MHz / prescaler
+    line = 0;
+  }
+
+  void _TC2_Init() {
+    // Arduino runs at 16 Mhz...
+    // Timer Settings, for the Timer Control Register etc. , thank you internets.
+    // Timer2/Timer4 (8bit) Settings:
+    // prescaler (frequency divider) values:   CSx2    CSx1   CSx0
+    //                                           0       0      0    stopped
+    //                                           0       0      1      /1
+    //                                           0       1      0      /8
+    //                                           0       1      1      /32
+    //                                           1       0      0      /64
+    //                                           1       0      1      /128
+    //                                           1       1      0      /256
+    //                                           1       1      1      /1024
+    // TCNT2/TCNT4 increments every  = 16MHz / prescaler
 
 #if defined(__AVR_ATmega1280__) || defined(__AVR_ATmega2560__)
-      TCCR2B |= ((1<<CS22)|(1<<CS20));      // prescaler 128
-      TCCR2B &=~ (1<<CS21);
-      TCCR2A &=~ (1<<WGM21)|(1<<WGM20);     // Use normal mode
-      TIMSK2 |= (1<<TOIE2);                 // Timer2 Overflow Interrupt Enable
-      TCNT2   = 0xff;
+    TCCR2B |= ((1<<CS22)|(1<<CS20));      // prescaler 128
+    TCCR2B &=~ (1<<CS21);
+    TCCR2A &=~ (1<<WGM21)|(1<<WGM20);     // Use normal mode
+    TIMSK2 |= (1<<TOIE2);                 // Timer2 Overflow Interrupt Enable
+    TCNT2   = 0xff;
 #elif defined(__AVR_ATmega32U4__)
-      TCCR4B |= ((1<<CS42)|(1<<CS41)|(1<<CS40)); // prescaler 128
-      TCCR4C &=~ (1<<PWM4D);
-      TCCR4A &=~ ((1<<COM4A1)|(1<<COM4A0)); // Use normal mode
-      TIMSK4 |= (1<<TOIE4);                 // Timer4D Overflow Interrupt Enable
-      TIFR4  |= (1<<TOV4);
-      OCR4C   = 0xff;
-      TCNT4   = 0xff;
+    TCCR4B |= ((1<<CS42)|(1<<CS41)|(1<<CS40)); // prescaler 128
+    TCCR4C &=~ (1<<PWM4D);
+    TCCR4A &=~ ((1<<COM4A1)|(1<<COM4A0)); // Use normal mode
+    TIMSK4 |= (1<<TOIE4);                 // Timer4D Overflow Interrupt Enable
+    TIFR4  |= (1<<TOV4);
+    OCR4C   = 0xff;
+    TCNT4   = 0xff;
 #else
-      TCCR2B |= ((1<<CS22)|(1<<CS20));      // prescaler 128
-      TCCR2B &=~ (1<<CS21);
-      TCCR2A &=~ (1<<WGM21)|(1<<WGM20);     // Use normal mode
-      ASSR   |= (1<<AS2);                   // Use internal clock - external clock not used in Arduino
-      TIMSK2 |= (1<<TOIE2);                 // Timer2 Overflow Interrupt Enable
-      TCNT2   = 0xff;
+    TCCR2B |= ((1<<CS22)|(1<<CS20));      // prescaler 128
+    TCCR2B &=~ (1<<CS21);
+    TCCR2A &=~ (1<<WGM21)|(1<<WGM20);     // Use normal mode
+    ASSR   |= (1<<AS2);                   // Use internal clock - external clock not used in Arduino
+    TIMSK2 |= (1<<TOIE2);                 // Timer2 Overflow Interrupt Enable
+    TCNT2   = 0xff;
 #endif
-      sei();
+    sei();
+  }
+
+  void open_line(unsigned char x) {
+    switch (x) {
+      case 0:
+        open_line0;
+        break;
+      case 1:
+        open_line1;
+        break;
+      case 2:
+        open_line2;
+        break;
+      case 3:
+        open_line3;
+        break;
+      case 4:
+        open_line4;
+        break;
+      case 5:
+        open_line5;
+        break;
+      case 6:
+        open_line6;
+        break;
+      case 7:
+        open_line7;
+        break;
+      default:
+        close_all_lines;
+        break;
     }
-  
-  void open_line(unsigned char x)
-    {
-      switch (x)
-	{  
-	case 0 :open_line0;
-	  break;
-	case 1 :open_line1;
-	  break;
-	case 2 :open_line2;
-	  break;
-	case 3 :open_line3;
-	  break;
-	case 4 :open_line4;
-	  break;
-	case 5 :open_line5;
-	  break;
-	case 6 :open_line6;
-	  break;
-	case 7 :open_line7;
-	  break;
-	default: close_all_lines;
-	  break;
-	}
-    }
+  }
 
   void Init() {
     _IO_Init();  //Init IO
@@ -288,21 +293,20 @@ class ColorduinoObject {
   }
 
   // set a pixel in the offscreen frame buffer
-  void SetPixel(unsigned char x, unsigned char y, unsigned char r, unsigned char g, unsigned char b)
-    {
-      PixelRGB *p = GetPixel(x,y);
-      p->r = r;
-      p->g = g;
-      p->b = b;
-    }
+  void SetPixel(unsigned char x, unsigned char y, unsigned char r, unsigned char g, unsigned char b) {
+    PixelRGB *p = GetPixel(x,y);
+    p->r = r;
+    p->g = g;
+    p->b = b;
+  }
 
-/********************************************************
-Name: ColorFill
-Function: Fill the frame with a color
-Parameter:R: the value of RED.   Range:RED 0~255
-          G: the value of GREEN. Range:RED 0~255
-          B: the value of BLUE.  Range:RED 0~255
-********************************************************/
+  /********************************************************
+  Name: ColorFill
+  Function: Fill the frame with a color
+  Parameter:R: the value of RED.   Range:RED 0~255
+            G: the value of GREEN. Range:RED 0~255
+            B: the value of BLUE.  Range:RED 0~255
+  ********************************************************/
   void ColorFill(unsigned char R,unsigned char G,unsigned char B);
 
   void run();
